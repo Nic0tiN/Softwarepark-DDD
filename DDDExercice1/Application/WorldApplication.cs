@@ -2,19 +2,22 @@
 using System.Collections.Generic;
 using System.Linq;
 using DDDExercice1.Domain;
+using DDDExercice1.Domain.Event;
 
-namespace DDDExercice1
+namespace DDDExercice1.Application
 {
-    public class Application
+    public class WorldApplication
     {
         private static Dictionary<(Place, Place), Route> Routing = new Dictionary<(Place, Place), Route>();
         private Dictionary<string, Place> Locations = new Dictionary<string, Place>();
         private HashSet<Container> Containers = new HashSet<Container>();
         private HashSet<Vehicle> Vehicles = new HashSet<Vehicle>();
-        private TimeSpan _currentTime;
+        private static TimeSpan _currentTime;
+        public EventHandler<TransportEvent> TransportEventHandler;
 
-        public Application(IEnumerable<string>containersDestination)
+        public WorldApplication(IEnumerable<string>containersDestination)
         {
+            _currentTime = new TimeSpan(0);
             Place factory = new Place("Factory");
             Place port = new Place("Port");
             Place locationA = new Place("A");
@@ -26,27 +29,35 @@ namespace DDDExercice1
             Locations.Add(locationB.Name, locationB);
 
             Routing.Add((factory, locationA), new Route(factory, port, TimeSpan.FromHours(1)));
-            Routing.Add((port, locationA), new Route(port, locationA, TimeSpan.FromHours(4)));
+            Routing.Add((port, locationA), new Route(port, locationA, TimeSpan.FromHours(6)));
             Routing.Add((factory, locationB), new Route(factory, locationB, TimeSpan.FromHours(5)));
 
-            Truck truck1 = new Truck("Truck 1", factory);
-            Truck truck2 = new Truck("Truck 2", factory);
-            Boat boat1 = new Boat("Boat 1", port);
+            Truck truck1 = new Truck(0, "Truck 1", factory);
+            Truck truck2 = new Truck(1, "Truck 2", factory);
+            Boat boat1 = new Boat(2, "Boat 1", port);
+            truck1.TransportEventHandler += WorldApplicationOnTransportEventHandler;
+            truck2.TransportEventHandler += WorldApplicationOnTransportEventHandler;
+            boat1.TransportEventHandler += WorldApplicationOnTransportEventHandler;
 
             this.Vehicles.Add(truck1);
             this.Vehicles.Add(truck2);
             this.Vehicles.Add(boat1);
 
+            int i = 0;
             foreach (var containerDestination in containersDestination)
             {
-                this.Containers.Add(new Container(this.Locations[containerDestination], factory));
+                this.Containers.Add(new Container(i++, this.Locations[containerDestination], factory));
             }
+        }
+
+        private void WorldApplicationOnTransportEventHandler(object sender, TransportEvent e)
+        {
+            TransportEventHandler?.Invoke(sender, e);
         }
 
         public void Delivery()
         {
-            var deliveryTime = new TimeSpan();
-            while (!this.AreAllContainersDelivered())
+            while (!(this.AreAllContainersDelivered() && AreAllVehiclesReady()))
             {
                 foreach (var vehicle in this.Vehicles)
                 {
@@ -54,8 +65,8 @@ namespace DDDExercice1
                 }
 
                 TimeSpan elapsedTime = TimeSpan.FromHours(1);
-                this._currentTime += elapsedTime;
-                // Find available vehicle and load container
+                _currentTime += elapsedTime;
+
                 foreach (var vehicle in this.Vehicles)
                 {
                     vehicle.Move(elapsedTime);
@@ -63,7 +74,7 @@ namespace DDDExercice1
 
                 foreach (var vehicle in this.Vehicles)
                 {
-                    vehicle.Unload();
+                    vehicle.Unload(elapsedTime);
                 }
             }
         }
@@ -78,6 +89,11 @@ namespace DDDExercice1
             return this.Containers.All(c => c.State == State.Arrived);
         }
 
-        public TimeSpan CurrentTime => _currentTime;
+        private bool AreAllVehiclesReady()
+        {
+            return this.Vehicles.All(c => c.State == Vehicle.Action.Ready);
+        }
+
+        public static TimeSpan CurrentTime => _currentTime;
     }
 }

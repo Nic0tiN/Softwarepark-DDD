@@ -20,11 +20,5 @@ namespace DDDExercice1.Domain
         public Place LoadingPlace => _loadingPlace;
         public Place UnloadingPlace => _unloadingPlace;
         public TimeSpan TravelingTime => _travelingTime;
-
-        public bool IsEqual(Place loadingPlace, Place unloadingPlace)
-        {
-            return (this._loadingPlace == loadingPlace && this._unloadingPlace == unloadingPlace);
-        }
-
     }
 }

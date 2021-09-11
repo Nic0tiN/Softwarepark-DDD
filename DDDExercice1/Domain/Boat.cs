@@ -1,11 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace DDDExercice1.Domain
 {
     class Boat: Vehicle 
     {
-        public Boat(string name, Place currentPlace): base(name, currentPlace) { }
+        public Boat(int id, string name, Place currentPlace): base(id, name, currentPlace) { }
+        public override string Kind => "SHIP";
+        protected override int Capacity => 4;
+        protected override TimeSpan LoadingTime => TimeSpan.FromHours(1);
+        protected override TimeSpan UnloadingTime => TimeSpan.FromHours(1);
     }
 }
